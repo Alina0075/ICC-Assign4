@@ -34,6 +34,11 @@ Parameters:
     MinLength: 8
     AllowedPattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).*$'
 
+  BookGenre:
+    Type: String
+    Default: Fiction
+    Description: Book genre supported by ReadSmart
+
 Resources:
 
   #################################
@@ -150,12 +155,16 @@ Resources:
         SecurityGroupIds:
           - !Ref RsP4AppSG2026
         UserData:
-          Fn::Base64: |
+          Fn::Base64: !Sub |
             #!/bin/bash
             yum install -y httpd php awscli
             systemctl start httpd
             systemctl enable httpd
+        
+            echo "BOOK_GENRE=${BookGenre}" >> /etc/environment
+        
             aws s3 cp s3://readsmart-static-site/ /var/www/html/ --recursive
+
 
   RsP4ASG2026:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -202,3 +211,4 @@ Outputs:
   ALBDNS:
     Description: Phase 4 ALB URL
     Value: !GetAtt RsP4Alb2026.DNSName
+

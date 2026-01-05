@@ -173,14 +173,16 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref RsP4LaunchTemplate2026
         Version: "1"
-      MinSize: "1"
-      MaxSize: "3"
-      DesiredCapacity: "1"
+      MinSize: "2"              # increased minimum
+      MaxSize: "6"              # increased maximum
+      DesiredCapacity: "3"      # launch 3 instances initially
       VPCZoneIdentifier: !Ref PrivateAppSubnets
       TargetGroupARNs:
         - !Ref RsP4TargetGroup2026
       HealthCheckType: ELB
       HealthCheckGracePeriod: 300
+
+
 
   #################################
   # RDS
@@ -211,4 +213,5 @@ Outputs:
   ALBDNS:
     Description: Phase 4 ALB URL
     Value: !GetAtt RsP4Alb2026.DNSName
+
 

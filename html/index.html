@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReadSmart Online Bookstore</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Roboto', sans-serif; background:#f9f9f9; color:#333; }
+a { text-decoration:none; color:inherit; }
+img { width:100%; border-radius:8px; }
+
+header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 60px; background:#fff;
+    box-shadow:0 4px 15px rgba(0,0,0,0.08);
+    position:sticky; top:0; z-index:100;
+}
+.logo { font-family:'Playfair Display', serif; font-size:28px; color:#2a2a72; }
+nav a { margin-left:35px; font-weight:500; }
+nav a:hover { color:#6a7ba2; }
+
+.hero {
+    background:url('https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1950&q=80') center/cover;
+    height:80vh; display:flex; align-items:center; justify-content:center;
+    color:#fff; position:relative;
+}
+.hero::after { content:""; position:absolute; inset:0; background:rgba(0,0,0,0.35); }
+.hero-content { position:relative; text-align:center; }
+.hero h1 { font-size:56px; font-family:'Playfair Display', serif; }
+.hero p { font-size:22px; margin:20px 0; }
+.hero button { padding:15px 30px; font-size:18px; background:#ffda79; border:none; border-radius:8px; cursor:pointer; transition:0.3s; }
+.hero button:hover { background:#ffcd3c; }
+
+.section-title { text-align:center; font-size:36px; margin:60px 0 30px; color:#2a2a72; }
+
+.cards { display:flex; justify-content:center; gap:25px; padding:0 60px 60px; flex-wrap:wrap; }
+.card { background:#fff; width:260px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); display:flex; flex-direction:column; overflow:hidden; }
+.card img { width:100%; height:300px; object-fit:cover; }
+.card h3 { padding:15px; color:#2a2a72; font-size:20px; }
+.card p { padding:0 15px 10px; flex:1; font-weight:500; }
+.card form { padding:0 15px 15px; display:flex; flex-direction:column; }
+.card form input[type="number"] { width:80px; padding:6px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc; }
+.card form button { background:#2a2a72; color:#fff; border:none; border-radius:8px; padding:12px; cursor:pointer; transition:0.3s; }
+.card form button:hover { background:#1f1f5c; }
+
+footer { text-align:center; padding:25px; background:#fff; border-top:1px solid #e0e0e0; }
+</style>
+</head>
+<body>
+
+<header>
+    <span class="logo">ReadSmart</span>
+    <nav>
+        <a href="#home">Home</a>
+        <a href="#books">Books</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+        <a href="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/signup.php?redirect=https://readsmart-static-site.s3.amazonaws.com/index.html">Sign Up</a>
+        <a href="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/login.php?redirect=https://readsmart-static-site.s3.amazonaws.com/index.html">Login</a>
+    </nav>
+</header>
+
+<section class="hero" id="home">
+    <div class="hero-content">
+        <h1>Discover Your Next Favorite Book</h1>
+        <p>Premium physical & digital books for every reader</p>
+        <a href="#books"><button>Explore Collection</button></a>
+    </div>
+</section>
+
+<h2 class="section-title" id="books">Random Picks for You</h2>
+<div class="cards">
+    <!-- Book 1 -->
+    <div class="card">
+        <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80">
+        <h3>The Great Adventure</h3>
+        <p>$15.99</p>
+        <form method="post" action="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/add_to_cart.php">
+            <input type="hidden" name="book_id" value="1">
+            <input type="number" name="quantity" value="1" min="1">
+            <input type="hidden" name="redirect" value="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/cart.php">
+            <button type="submit">Add to Cart</button>
+        </form>
+    </div>
+    <!-- Book 2 -->
+    <div class="card">
+        <img src="https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80">
+        <h3>Mystery of the Night</h3>
+        <p>$12.50</p>
+        <form method="post" action="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/add_to_cart.php">
+            <input type="hidden" name="book_id" value="2">
+            <input type="number" name="quantity" value="1" min="1">
+            <input type="hidden" name="redirect" value="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/cart.php">
+            <button type="submit">Add to Cart</button>
+        </form>
+    </div>
+    <!-- Book 3 -->
+    <div class="card">
+        <img src="https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=800&q=80">
+        <h3>Learn Python</h3>
+        <p>$18.00</p>
+        <form method="post" action="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/add_to_cart.php">
+            <input type="hidden" name="book_id" value="3">
+            <input type="number" name="quantity" value="1" min="1">
+            <input type="hidden" name="redirect" value="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/cart.php">
+            <button type="submit">Add to Cart</button>
+        </form>
+    </div>
+    <!-- Book 4 -->
+    <div class="card">
+        <img src="https://images.unsplash.com/photo-1512820790801-3c13cd63a5e2?auto=format&fit=crop&w=800&q=80">
+        <h3>History of Art</h3>
+        <p>$22.00</p>
+        <form method="post" action="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/add_to_cart.php">
+            <input type="hidden" name="book_id" value="4">
+            <input type="number" name="quantity" value="1" min="1">
+            <input type="hidden" name="redirect" value="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/cart.php">
+            <button type="submit">Add to Cart</button>
+        </form>
+    </div>
+    <!-- Book 5 -->
+    <div class="card">
+        <img src="https://images.unsplash.com/photo-1473862175550-4e4e0b3bbd2b?auto=format&fit=crop&w=800&q=80">
+        <h3>Cooking 101</h3>
+        <p>$14.75</p>
+        <form method="post" action="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/add_to_cart.php">
+            <input type="hidden" name="book_id" value="5">
+            <input type="number" name="quantity" value="1" min="1">
+            <input type="hidden" name="redirect" value="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/cart.php">
+            <button type="submit">Add to Cart</button>
+        </form>
+    </div>
+    <!-- Book 6 -->
+    <div class="card">
+        <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?auto=format&fit=crop&w=800&q=80">
+        <h3>Gardening Basics</h3>
+        <p>$16.20</p>
+        <form method="post" action="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/add_to_cart.php">
+            <input type="hidden" name="book_id" value="6">
+            <input type="number" name="quantity" value="1" min="1">
+            <input type="hidden" name="redirect" value="http://readsmart-alb-1880170115.us-east-1.elb.amazonaws.com/cart.php">
+            <button type="submit">Add to Cart</button>
+        </form>
+    </div>
+</div>
+
+<h2 class="section-title" id="about">About ReadSmart</h2>
+<p style="text-align:center; max-width:900px; margin:auto;">
+ReadSmart is a scalable cloud-based bookstore designed to handle seasonal traffic spikes with high availability and secure backend processing.
+</p>
+
+<footer id="contact">
+    &copy; 2026 ReadSmart Online Bookstore — All Rights Reserved
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ReadSmart Phase 4 - Private ASG + ALB + RDS with S3 Deployment
+
+Parameters:
+  VpcId:
+    Type: String
+    Default: vpc-0e4b70ee419b02aa8
+
+  PublicSubnets:
+    Type: List<String>
+    Default: subnet-05f18311f0dcc1a52,subnet-098d61df3062e2d28
+
+  PrivateAppSubnets:
+    Type: List<String>
+    Default: subnet-0c829a72007776433,subnet-0ba3cd90c9bd66feb
+
+  RDSSubnets:
+    Type: List<String>
+    Default: subnet-0ba3cd90c9bd66feb,subnet-077fef83212d222a2,subnet-0fbfbc47436df57a3,subnet-0ff5a71ee20ba3b95,subnet-03bebb63f33245af8
+
+  KeyPairName:
+    Type: String
+    Default: Assignment4
+
+  DBUsername:
+    Type: String
+    Default: readsmartadmin
+    NoEcho: true
+    Description: Master username for RDS instance
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Default: ReadSmart1A
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).*$'
+    Description: Must include uppercase, lowercase, and number
+
+Resources:
+
+  # ------------------------------
+  # IAM Role for EC2 to access S3
+  # ------------------------------
+  ReadSmartEC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  ReadSmartEC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ReadSmartEC2Role
+
+  # ------------------------------
+  # Security Groups
+  # ------------------------------
+  BastionSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Bastion SSH Access
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 139.135.32.229/32
+
+  ALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public ALB Access
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  AppSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Private App EC2 SG
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref BastionSG
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSG
+
+  # ------------------------------
+  # ALB + Target Group
+  # ------------------------------
+  ReadSmartALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: readsmart-alb-phase4
+      Scheme: internet-facing
+      Type: application
+      Subnets: !Ref PublicSubnets
+      SecurityGroups:
+        - !Ref ALBSG
+
+  ReadSmartTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: readsmart-tg-phase4
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: instance
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ReadSmartALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ReadSmartTG
+
+  # ------------------------------
+  # Launch Template + ASG
+  # ------------------------------
+  ReadSmartLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: readsmart-launch-template
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Name: !Ref ReadSmartEC2InstanceProfile
+        ImageId: ami-08b45cbecc38c90e1 # Replace with correct AMI for your region
+        InstanceType: t3.micro
+        KeyName: !Ref KeyPairName
+        SecurityGroupIds:
+          - !Ref AppSG
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd php awscli
+            systemctl enable httpd
+            systemctl start httpd
+            aws s3 cp s3://readsmart-static-site/ /var/www/html/ --recursive
+
+  ReadSmartASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT5M
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ReadSmartLaunchTemplate
+        Version: "1"
+      MinSize: "1"
+      MaxSize: "3"
+      DesiredCapacity: "1"
+      VPCZoneIdentifier: !Ref PrivateAppSubnets
+      TargetGroupARNs:
+        - !Ref ReadSmartTG
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      Tags:
+        - Key: Name
+          Value: ReadSmart-App-EC2
+          PropagateAtLaunch: true
+
+  # ------------------------------
+  # RDS
+  # ------------------------------
+  ReadSmartDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: ReadSmart RDS Subnet Group
+      SubnetIds: !Ref RDSSubnets
+
+  ReadSmartRDS:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: readsmart-db-phase4
+      Engine: mysql
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: 20
+      PubliclyAccessible: false
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !Ref AppSG
+      DBSubnetGroupName: !Ref ReadSmartDBSubnetGroup
+      BackupRetentionPeriod: 0
+      MultiAZ: false
+
+Outputs:
+
+  ALBDNS:
+    Description: ALB Domain Name
+    Value: !GetAtt ReadSmartALB.DNSName

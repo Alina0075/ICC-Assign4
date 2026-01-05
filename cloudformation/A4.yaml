@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: ReadSmart Phase 4 - Private ASG + ALB + RDS with S3 Deployment
+Description: ReadSmart Phase 4 - Unique Private ASG + ALB + RDS with S3 Deployment
 
 Parameters:
   VpcId:
@@ -24,27 +24,25 @@ Parameters:
 
   DBUsername:
     Type: String
-    Default: readsmartadmin
+    Default: rsadminp4
     NoEcho: true
-    Description: Master username for RDS instance
 
   DBPassword:
     Type: String
     NoEcho: true
-    Default: ReadSmart1A
+    Default: ReadSmart9A
     MinLength: 8
-    MaxLength: 41
     AllowedPattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).*$'
-    Description: Must include uppercase, lowercase, and number
 
 Resources:
 
-  # ------------------------------
-  # IAM Role for EC2 to access S3
-  # ------------------------------
-  ReadSmartEC2Role:
+  #################################
+  # IAM
+  #################################
+  RsP4EC2Role2026:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: rs-p4-ec2-role-2026
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -56,19 +54,20 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 
-  ReadSmartEC2InstanceProfile:
+  RsP4EC2Profile2026:
     Type: AWS::IAM::InstanceProfile
     Properties:
+      InstanceProfileName: rs-p4-ec2-profile-2026
       Roles:
-        - !Ref ReadSmartEC2Role
+        - !Ref RsP4EC2Role2026
 
-  # ------------------------------
-  # Security Groups
-  # ------------------------------
-  BastionSG:
+  #################################
+  # SECURITY GROUPS
+  #################################
+  RsP4BastionSG2026:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Bastion SSH Access
+      GroupDescription: rs-p4-bastion-sg
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -76,10 +75,10 @@ Resources:
           ToPort: 22
           CidrIp: 139.135.32.229/32
 
-  ALBSG:
+  RsP4AlbSG2026:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Public ALB Access
+      GroupDescription: rs-p4-alb-sg
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -87,121 +86,106 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
 
-  AppSG:
+  RsP4AppSG2026:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Private App EC2 SG
+      GroupDescription: rs-p4-app-sg
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          SourceSecurityGroupId: !Ref BastionSG
+          SourceSecurityGroupId: !Ref RsP4BastionSG2026
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          SourceSecurityGroupId: !Ref ALBSG
+          SourceSecurityGroupId: !Ref RsP4AlbSG2026
 
-  # ------------------------------
-  # ALB + Target Group
-  # ------------------------------
-  ReadSmartALB:
+  #################################
+  # ALB
+  #################################
+  RsP4Alb2026:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: readsmart-alb-phase4
+      Name: rs-p4-alb-2026
       Scheme: internet-facing
       Type: application
       Subnets: !Ref PublicSubnets
       SecurityGroups:
-        - !Ref ALBSG
+        - !Ref RsP4AlbSG2026
 
-  ReadSmartTG:
+  RsP4TargetGroup2026:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: readsmart-tg-phase4
+      Name: rs-p4-tg-2026
       Port: 80
       Protocol: HTTP
       VpcId: !Ref VpcId
-      TargetType: instance
       HealthCheckPath: /
-      HealthCheckIntervalSeconds: 30
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 3
-      Matcher:
-        HttpCode: 200
+      TargetType: instance
 
-  ALBListener:
+  RsP4Listener2026:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      LoadBalancerArn: !Ref ReadSmartALB
+      LoadBalancerArn: !Ref RsP4Alb2026
       Port: 80
       Protocol: HTTP
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !Ref ReadSmartTG
+          TargetGroupArn: !Ref RsP4TargetGroup2026
 
-  # ------------------------------
-  # Launch Template + ASG
-  # ------------------------------
-  ReadSmartLaunchTemplate:
+  #################################
+  # LAUNCH TEMPLATE + ASG
+  #################################
+  RsP4LaunchTemplate2026:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: readsmart-launch-template
+      LaunchTemplateName: rs-p4-lt-2026
       LaunchTemplateData:
         IamInstanceProfile:
-          Name: !Ref ReadSmartEC2InstanceProfile
-        ImageId: ami-08b45cbecc38c90e1 # Replace with correct AMI for your region
+          Name: !Ref RsP4EC2Profile2026
+        ImageId: ami-08b45cbecc38c90e1
         InstanceType: t3.micro
         KeyName: !Ref KeyPairName
         SecurityGroupIds:
-          - !Ref AppSG
+          - !Ref RsP4AppSG2026
         UserData:
-          Fn::Base64: !Sub |
+          Fn::Base64: |
             #!/bin/bash
-            yum update -y
             yum install -y httpd php awscli
-            systemctl enable httpd
             systemctl start httpd
+            systemctl enable httpd
             aws s3 cp s3://readsmart-static-site/ /var/www/html/ --recursive
 
-  ReadSmartASG:
+  RsP4ASG2026:
     Type: AWS::AutoScaling::AutoScalingGroup
-    UpdatePolicy:
-      AutoScalingRollingUpdate:
-        MinInstancesInService: 1
-        MaxBatchSize: 1
-        PauseTime: PT5M
     Properties:
+      AutoScalingGroupName: rs-p4-asg-2026
       LaunchTemplate:
-        LaunchTemplateId: !Ref ReadSmartLaunchTemplate
+        LaunchTemplateId: !Ref RsP4LaunchTemplate2026
         Version: "1"
       MinSize: "1"
       MaxSize: "3"
       DesiredCapacity: "1"
       VPCZoneIdentifier: !Ref PrivateAppSubnets
       TargetGroupARNs:
-        - !Ref ReadSmartTG
+        - !Ref RsP4TargetGroup2026
       HealthCheckType: ELB
       HealthCheckGracePeriod: 300
-      Tags:
-        - Key: Name
-          Value: ReadSmart-App-EC2
-          PropagateAtLaunch: true
 
-  # ------------------------------
+  #################################
   # RDS
-  # ------------------------------
-  ReadSmartDBSubnetGroup:
+  #################################
+  RsP4DBSubnetGroup2026:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupDescription: ReadSmart RDS Subnet Group
+      DBSubnetGroupDescription: rs-p4-db-subnet-2026
       SubnetIds: !Ref RDSSubnets
 
-  ReadSmartRDS:
+  RsP4RDS2026:
     Type: AWS::RDS::DBInstance
     Properties:
-      DBInstanceIdentifier: readsmart-db-phase4
+      DBInstanceIdentifier: rs-p4-db-2026-unique
       Engine: mysql
       DBInstanceClass: db.t4g.micro
       AllocatedStorage: 20
@@ -209,13 +193,12 @@ Resources:
       MasterUsername: !Ref DBUsername
       MasterUserPassword: !Ref DBPassword
       VPCSecurityGroups:
-        - !Ref AppSG
-      DBSubnetGroupName: !Ref ReadSmartDBSubnetGroup
+        - !Ref RsP4AppSG2026
+      DBSubnetGroupName: !Ref RsP4DBSubnetGroup2026
       BackupRetentionPeriod: 0
       MultiAZ: false
 
 Outputs:
-
   ALBDNS:
-    Description: ALB Domain Name
-    Value: !GetAtt ReadSmartALB.DNSName
+    Description: Phase 4 ALB URL
+    Value: !GetAtt RsP4Alb2026.DNSName
